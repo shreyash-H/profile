@@ -1,0 +1,36 @@
+name: Deploy to VPS via SSH
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Copy deploy script
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy/deploy_remote.sh"
+          target: "${{ secrets.DEPLOY_DIR }}/deploy_remote.sh"
+      - name: Run remote deploy script
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            chmod +x "${{ secrets.DEPLOY_DIR }}/deploy_remote.sh"
+            "${{ secrets.DEPLOY_DIR }}/deploy_remote.sh" "${{ github.repository }}" "${{ github.ref_name }}" "${{ secrets.DEPLOY_DIR }}"
